@@ -6,10 +6,10 @@ namespace TrainingCenterSystem.Models.Entities
     public class Payment
     {
         [Key]
-        public int Id { get; set; }
+        public long Id { get; set; }
 
         [Required]
-        public int EnrollmentId { get; set; }
+        public long EnrollmentId { get; set; }
 
         [ForeignKey(nameof(EnrollmentId))]
         public Enrollment Enrollment { get; set; } = null!;
