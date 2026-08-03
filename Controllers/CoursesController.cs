@@ -69,6 +69,7 @@ namespace TrainingCenterSystem.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateCourse([FromBody] CourseCreateDto dto)
         {
             if (dto == null) return BadRequest(new { message = "Course data is required." });

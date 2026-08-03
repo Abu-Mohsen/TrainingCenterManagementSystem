@@ -75,6 +75,7 @@ namespace TrainingCenterSystem.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateEnrollment([FromBody] EnrollCreateDto dto)
         {
             if (dto == null) return BadRequest(new { message = "Enrollment data is null." });
