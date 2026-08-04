@@ -8,17 +8,16 @@ namespace TrainingCenterSystem.Models.Entities
         public long Id { get; set; }
 
         [Required]
-        [StringLength(100)]
+        [StringLength(100)] // Note For Me : In Entity Use MaxLength and in DTO Use StringLength
         public string FullName { get; set; } = string.Empty;
 
         [Required]
-        [EmailAddress]
-        [StringLength(100)]
+        [StringLength(40)]
         public string Email { get; set; } = string.Empty;
 
-        [Phone]
-        [StringLength(20)]
-        public string Phone { get; set; } = string.Empty;
+        
+        [StringLength(10)]
+        public string PhoneNumber { get; set; } = string.Empty;
 
         [StringLength(100)]
         public string Specialization { get; set; } = string.Empty;

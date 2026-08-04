@@ -39,8 +39,8 @@ namespace TrainingCenterSystem.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("Fee")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
 
                     b.Property<long?>("InstructorId")
                         .HasColumnType("bigint");
@@ -78,8 +78,8 @@ namespace TrainingCenterSystem.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("PaidAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -90,8 +90,8 @@ namespace TrainingCenterSystem.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
 
                     b.HasKey("Id");
 
@@ -113,18 +113,18 @@ namespace TrainingCenterSystem.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
 
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Phone")
+                    b.Property<string>("PhoneNumber")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("Specialization")
                         .IsRequired()
@@ -145,8 +145,8 @@ namespace TrainingCenterSystem.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
 
                     b.Property<long>("EnrollmentId")
                         .HasColumnType("bigint");
@@ -175,18 +175,18 @@ namespace TrainingCenterSystem.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
 
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Phone")
+                    b.Property<string>("PhoneNumber")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("Specialty")
                         .IsRequired()

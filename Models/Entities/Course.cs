@@ -16,11 +16,9 @@ namespace TrainingCenterSystem.Models.Entities
         public string Description { get; set; } = string.Empty;
 
         [Required]
-        [Range(1, 500)]
         public int MaxCapacity { get; set; }
 
         [Required]
-        [Column(TypeName = "decimal(18,2)")]
         public decimal Fee { get; set; }
 
         public DateTime StartDate { get; set; }

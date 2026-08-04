@@ -29,10 +29,10 @@ namespace TrainingCenterSystem.Models.Entities
         [StringLength(20)]
         public string Status { get; set; } = "Active";
 
-        [Column(TypeName = "decimal(18,2)")]
+        
         public decimal TotalAmount { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
+        
         public decimal PaidAmount { get; set; } = 0;
 
         public bool IsFullyPaid => PaidAmount >= TotalAmount;

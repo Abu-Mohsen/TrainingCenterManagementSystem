@@ -50,7 +50,7 @@ namespace TrainingCenterSystem.Controllers
                     Id = s.Id,
                     FullName = s.FullName,
                     Email = s.Email,
-                    Phone = s.Phone,
+                    PhoneNumber = s.PhoneNumber,
                     Specialty = s.Specialty,
                     EnrolledCoursesCount = s.Enrollments.Count
                 })
@@ -98,7 +98,7 @@ namespace TrainingCenterSystem.Controllers
                     Id = student.Id,
                     FullName = student.FullName,
                     Email = student.Email,
-                    Phone = student.Phone,
+                    PhoneNumber = student.PhoneNumber,
                     Specialty = student.Specialty,
                     EnrolledCoursesCount = student.Enrollments.Count
                 },
@@ -129,7 +129,7 @@ namespace TrainingCenterSystem.Controllers
             {
                 FullName = dto.FullName,
                 Email = dto.Email,
-                Phone = dto.Phone,
+                PhoneNumber = dto.PhoneNumber,
                 Specialty = dto.Specialty
             };
             _context.Students.Add(student);
@@ -140,7 +140,7 @@ namespace TrainingCenterSystem.Controllers
                 Id = student.Id,
                 FullName = student.FullName,
                 Email = student.Email,
-                Phone = student.Phone,
+                PhoneNumber = student.PhoneNumber,
                 Specialty = student.Specialty,
                 EnrolledCoursesCount = 0
             };
@@ -165,9 +165,9 @@ namespace TrainingCenterSystem.Controllers
             }
             student.FullName = dto.FullName;
             student.Email = dto.Email;
-            student.Phone = dto.Phone;
+            student.PhoneNumber = dto.PhoneNumber;
             student.Specialty = dto.Specialty;
-            
+
             await _context.SaveChangesAsync();
             return NoContent();
         }
@@ -194,7 +194,7 @@ namespace TrainingCenterSystem.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Student with ID {id} deleted successfully." });
-        } 
+        }
     }
-         
+
 }

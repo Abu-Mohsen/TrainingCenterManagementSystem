@@ -30,7 +30,7 @@ namespace TrainingCenterSystem.Controllers
                             Id = instructor.Id,
                             FullName = instructor.FullName,
                             Email = instructor.Email,
-                            Phone = instructor.Phone,
+                            PhoneNumber = instructor.PhoneNumber,
                             Specialization = instructor.Specialization,
                             AssignedCoursesCount = instructor.Courses.Count
                         };
@@ -67,7 +67,7 @@ namespace TrainingCenterSystem.Controllers
                     Id = instructor.Id,
                     FullName = instructor.FullName,
                     Email = instructor.Email,
-                    Phone = instructor.Phone,
+                    PhoneNumber = instructor.PhoneNumber,
                     Specialization = instructor.Specialization,
                     AssignedCoursesCount = instructor.Courses.Count
                 },
@@ -94,7 +94,7 @@ namespace TrainingCenterSystem.Controllers
             {
                 FullName = dto.FullName,
                 Email = dto.Email,
-                Phone = dto.Phone,
+                PhoneNumber = dto.PhoneNumber,
                 Specialization = dto.Specialization
             };
 
@@ -106,7 +106,7 @@ namespace TrainingCenterSystem.Controllers
                 Id = instructor.Id,
                 FullName = instructor.FullName,
                 Email = instructor.Email,
-                Phone = instructor.Phone,
+                PhoneNumber = instructor.PhoneNumber,
                 Specialization = instructor.Specialization,
                 AssignedCoursesCount = 0 // Cuz it's a new instructor with no courses yet
             };
@@ -132,7 +132,7 @@ namespace TrainingCenterSystem.Controllers
 
             instructor.FullName = dto.FullName;
             instructor.Email = dto.Email;
-            instructor.Phone = dto.Phone;
+            instructor.PhoneNumber = dto.PhoneNumber;
             instructor.Specialization = dto.Specialization;
             
             await _context.SaveChangesAsync();

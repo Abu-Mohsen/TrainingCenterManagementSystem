@@ -11,13 +11,12 @@ namespace TrainingCenterSystem.Models.Entities
         public string FullName { get; set; } = string.Empty;
 
         [Required]
-        [EmailAddress]
-        [StringLength(100)]
+        [StringLength(40)]
         public string Email { get; set; } = string.Empty;
 
-        [Phone]
-        [StringLength(20)]
-        public string Phone { get; set; } = string.Empty;
+        
+        [StringLength(10)]
+        public string PhoneNumber { get; set; } = string.Empty;
 
         [StringLength(100)]
         public string Specialty { get; set; } = string.Empty;

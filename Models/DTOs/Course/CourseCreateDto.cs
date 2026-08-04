@@ -4,20 +4,20 @@ namespace TrainingCenterSystem.Models.DTOs.Course
 {
     public class CourseCreateDto
     {
-        [Required(ErrorMessage = "عنوان الدورة مطلوب")]
-        [StringLength(150)]
+        [Required(ErrorMessage = "Course title is required.")]
+        [StringLength(100 , ErrorMessage = "Course title cannot exceed 100 characters.")]
         public string Title { get; set; } = string.Empty;
 
-        [StringLength(500)]
+        [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters.")]
         public string Description { get; set; } = string.Empty;
 
-        [Required]
-        [Range(1, 500, ErrorMessage = "السعة يجب أن تكون بين 1 و 500")]
+        [Required(ErrorMessage = "Maximum capacity is required.")]
+        [Range(20, 300, ErrorMessage = "Capacity must be between 20 and 300 students.")]
         public int MaxCapacity { get; set; }
 
-        [Required]
-        [Range(0, 500, ErrorMessage = "الرسوم يجب أن تكون قيمة موجبة بين 0 و 500 دينار")]
-        public decimal Fee { get; set; }
+        [Required(ErrorMessage = "Course fee is required.")]
+        [Range(0, 500, ErrorMessage = "Fee must be a positive value between 0 and 500.")]
+        public decimal Fee { get; set; } 
 
         [Required]
         public DateTime StartDate { get; set; }

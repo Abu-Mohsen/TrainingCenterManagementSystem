@@ -15,7 +15,6 @@ namespace TrainingCenterSystem.Models.Entities
         public Enrollment Enrollment { get; set; } = null!;
 
         [Required]
-        [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
 
         public DateTime PaymentDate { get; set; } = DateTime.UtcNow;

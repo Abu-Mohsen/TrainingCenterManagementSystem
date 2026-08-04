@@ -4,10 +4,10 @@ namespace TrainingCenterSystem.Models.DTOs.Enrollment
 {
     public class EnrollCreateDto
     {
-        [Required(ErrorMessage = "معرف الطالب مطلوب")]
+        [Required(ErrorMessage = "Student ID is required.")]
         public long StudentId { get; set; }
 
-        [Required(ErrorMessage = "معرف الدورة مطلوب")]
+        [Required(ErrorMessage = "Course ID is required.")]
         public long CourseId { get; set; }
     }
 }

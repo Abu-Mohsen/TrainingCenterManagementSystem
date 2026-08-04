@@ -36,19 +36,19 @@ namespace TrainingCenterSystem.Models.Data
             // Precision For Decimal Properties (Course | Payment | Enrollment)
             modelBuilder.Entity<Course>()
                 .Property(c => c.Fee)
-                .HasPrecision(18, 2);
+                .HasPrecision(8, 2);
 
             modelBuilder.Entity<Enrollment>()
                 .Property(e => e.TotalAmount)
-                .HasPrecision(18, 2);
+                .HasPrecision(8, 2);
 
             modelBuilder.Entity<Enrollment>()
                 .Property(e => e.PaidAmount)
-                .HasPrecision(18, 2);
+                .HasPrecision(8, 2);
 
             modelBuilder.Entity<Payment>()
                 .Property(p => p.Amount)
-                .HasPrecision(18, 2);
+                .HasPrecision(8, 2);
 
         }
     }
