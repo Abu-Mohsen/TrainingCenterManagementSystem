@@ -46,26 +46,42 @@ namespace TrainingCenterSystem.Controllers
         public async Task<IActionResult> GetCourse(long id)
         {
             var course = await _context.Courses
-                 .Where(c => c.Id == id)
-                 .Select(c => new CourseReadDto
-                 {
-                     Id = c.Id,
-                     Title = c.Title,
-                     Description = c.Description,
-                     MaxCapacity = c.MaxCapacity,
-                     Fee = c.Fee,
-                     StartDate = c.StartDate,
-                     EndDate = c.EndDate,
-                     InstructorId = c.InstructorId,
-                     InstructorName = c.Instructor != null ? c.Instructor.FullName : "Not Specified Yet.",
-                     EnrolledStudentsCount = c.Enrollments.Count
-                 })
-                 .FirstOrDefaultAsync();
+                .Include(c => c.Instructor)
+                .Include(c => c.Enrollments)
+                    .ThenInclude(e => e.Student)
+                .FirstOrDefaultAsync(c => c.Id == id);
+            
+            if(course == null) return NotFound(new {message = $"The Course With ID {id} Does Not Exist." });
 
-            if (course == null) return NotFound(new { message = $"The Course With ID {id} Does Not Exist." });
+            var enrolledStudents = course.Enrollments.Select(e => new // Anonymous Type
+            {
+                EnrollmentId = e.Id,
+                StudentId = e.StudentId,
+                StudentName = e.Student.FullName,
+                EnrollmentDate = e.EnrollmentDate
+            }).ToList();
 
-            return Ok(course);
+            var result = new
+            {
+                CourseDetails = new CourseReadDto
+                {
+                    Id = course.Id,
+                    Title = course.Title,
+                    Description = course.Description,
+                    MaxCapacity = course.MaxCapacity,
+                    Fee = course.Fee,
+                    StartDate = course.StartDate,
+                    EndDate = course.EndDate,
+                    InstructorId = course.InstructorId,
+                    InstructorName = course.Instructor != null ? course.Instructor.FullName : "Not Specified Yet.",
+                    EnrolledStudentsCount = course.Enrollments.Count
+                },
 
+                AvailableSeats = course.MaxCapacity - course.Enrollments.Count,
+                EnrolledStudents = enrolledStudents
+            };
+
+            return Ok(result);
         }
 
         [HttpPost]
@@ -165,7 +181,45 @@ namespace TrainingCenterSystem.Controllers
 
         }
 
+        [HttpPost("{Id}/assign-instructor")]
+        public async Task<IActionResult> AssignInstructor(long Id, [FromQuery] AssignInstructorDto assign)
+        {
+            var course = await _context.Courses.FindAsync(Id);
+            if (course == null) return NotFound(new { message = $"The Course With ID {Id} Does Not Exist." });
 
+            var instructorExists = await _context.Instructors.AnyAsync(i => i.Id == assign.InstructorId);
+            if (!instructorExists) return BadRequest(new { message = $"Instructor with ID {assign.InstructorId} does not exist." });
+
+            if (course.InstructorId.HasValue)
+            {
+                return BadRequest(new { message = $"Course with ID {Id} already has an assigned instructor." });
+            }
+
+            course.InstructorId = assign.InstructorId;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Instructor with ID {assign.InstructorId} has been assigned to Course with ID {Id}." });
+        }
+
+        [HttpPut("{Id}/change-instructor")]
+        public async Task<IActionResult> ChangeInstructor(long Id, [FromQuery] AssignInstructorDto assign)
+        {
+            var course = await _context.Courses.FindAsync(Id);
+            if (course == null) return NotFound(new { message = $"The Course With ID {Id} Does Not Exist." });
+
+            var instructorExists = await _context.Instructors.AnyAsync(i => i.Id == assign.InstructorId);
+            if (!instructorExists) return BadRequest(new { message = $"Instructor with ID {assign.InstructorId} does not exist." });
+
+            if (!course.InstructorId.HasValue)
+            {
+                return BadRequest(new { message = $"This Course Dose not Have An Instructor." });
+            }
+
+            course.InstructorId = assign.InstructorId;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Instructor for Course {Id + " " + "[" + course.Title + "]"} updated successfully to Instructor {assign.InstructorId}." });
+        }
 
     }
 }

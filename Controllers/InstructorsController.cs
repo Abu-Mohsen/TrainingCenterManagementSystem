@@ -32,7 +32,7 @@ namespace TrainingCenterSystem.Controllers
                             Email = instructor.Email,
                             Phone = instructor.Phone,
                             Specialization = instructor.Specialization,
-                            CoursesCount = instructor.Courses.Count
+                            AssignedCoursesCount = instructor.Courses.Count
                         };
             var instructors = await query.ToListAsync();
             return Ok(instructors);
@@ -42,23 +42,39 @@ namespace TrainingCenterSystem.Controllers
         public async Task<IActionResult> GetInstructor(long id)
         {
             var instructor = await _context.Instructors
-                .Where(i => i.Id == id)
-                .Select(i => new InstructorReadDto
-                {
-                    Id = i.Id,
-                    FullName = i.FullName,
-                    Email = i.Email,
-                    Phone = i.Phone,
-                    Specialization = i.Specialization,
-                    CoursesCount = i.Courses.Count
-                })
-                .FirstOrDefaultAsync();
-            if (instructor == null)
-            {
-                return NotFound(new { message = $"The Instructor With ID {id} Not Exist." });
-            }
-            return Ok(instructor);
+                 .Include(i => i.Courses)
+                     .ThenInclude(c => c.Enrollments)
+                 .FirstOrDefaultAsync(i => i.Id == id);
 
+            if (instructor == null) return NotFound(new { message = $"Instructor with ID {id} does not exist." });
+
+            var assignedCourses = instructor.Courses.Select(c => new
+            {
+                CourseId = c.Id,
+                Title = c.Title,
+                MaxCapacity = c.MaxCapacity,
+                Fee = c.Fee,
+                StartDate = c.StartDate,
+                EndDate = c.EndDate,
+                EnrolledStudentsCount = c.Enrollments.Count
+
+            }).ToList();
+
+            var res = new
+            {
+                InstructorDetails = new InstructorReadDto
+                {
+                    Id = instructor.Id,
+                    FullName = instructor.FullName,
+                    Email = instructor.Email,
+                    Phone = instructor.Phone,
+                    Specialization = instructor.Specialization,
+                    AssignedCoursesCount = instructor.Courses.Count
+                },
+                AssignedCourses = assignedCourses
+            };
+
+            return Ok(res);
         }
 
         [HttpPost]
@@ -92,7 +108,7 @@ namespace TrainingCenterSystem.Controllers
                 Email = instructor.Email,
                 Phone = instructor.Phone,
                 Specialization = instructor.Specialization,
-                CoursesCount = 0 // Cuz it's a new instructor with no courses yet
+                AssignedCoursesCount = 0 // Cuz it's a new instructor with no courses yet
             };
 
             return CreatedAtAction(nameof(GetInstructor), new { id = instructor.Id }, resultDto);

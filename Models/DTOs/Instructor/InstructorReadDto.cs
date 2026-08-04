@@ -7,6 +7,6 @@
         public string Email { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Specialization { get; set; } = string.Empty;
-        public int CoursesCount { get; set; } // Number of courses the instructor is teaching
+        public int AssignedCoursesCount { get; set; } // Number of courses the instructor is teaching
     }
 }

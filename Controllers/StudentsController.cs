@@ -29,6 +29,7 @@ namespace TrainingCenterSystem.Controllers
 
             var query = _context.Students.AsQueryable();
 
+            // Dynamic Filtering
             if (!string.IsNullOrWhiteSpace(dto.Name))
             {
                 query = query.Where(s => s.FullName.ToLower().Contains(dto.Name.ToLower().Trim()));
@@ -39,25 +40,11 @@ namespace TrainingCenterSystem.Controllers
                 query = query.Where(s => s.Specialty.ToLower().Contains(dto.Specialty.ToLower().Trim()));
             }
 
-            var students = await query.Select(s => new StudentReadDto
-            {
-                Id = s.Id,
-                FullName = s.FullName,
-                Email = s.Email,
-                Phone = s.Phone,
-                Specialty = s.Specialty,
-                EnrolledCoursesCount = s.Enrollments.Count
-            })
-             .ToListAsync();
-
-            return Ok(students);
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetStudent(long id)
-        {
-            var student = await _context.Students
-                .Where(s => s.Id == id)
+            var students = await query
+                .Include(s => s.Enrollments)
+                    .ThenInclude(e => e.Payments)
+                .Include(s => s.Enrollments)
+                    .ThenInclude(e => e.Course)
                 .Select(s => new StudentReadDto
                 {
                     Id = s.Id,
@@ -67,12 +54,64 @@ namespace TrainingCenterSystem.Controllers
                     Specialty = s.Specialty,
                     EnrolledCoursesCount = s.Enrollments.Count
                 })
-                .FirstOrDefaultAsync();
+                .ToListAsync();
+
+            return Ok(students);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetStudent(long id)
+        {
+            var student = await _context.Students
+                .Include(s => s.Enrollments)
+                    .ThenInclude(e => e.Course)
+                .Include(s => s.Enrollments)
+                    .ThenInclude(e => e.Payments)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
             if (student == null)
             {
                 return NotFound(new { message = $"The Student With ID {id} Not Exist." });
             }
-            return Ok(student);
+
+            var enrolledCourses = student.Enrollments.Select(e => new
+            {
+                EnrollmentId = e.Id,
+                CourseId = e.CourseId,
+                CourseTitle = e.Course.Title,
+                CourseFee = e.Course.Fee,
+                PaidAmount = e.Payments.Sum(p => p.Amount),
+                RemainingAmount = e.Course.Fee - e.Payments.Sum(p => p.Amount),
+                IsFullyPaid = e.Payments.Sum(p => p.Amount) >= e.Course.Fee,
+                EnrollmentDate = e.EnrollmentDate
+
+            }).ToList();
+
+            decimal totalRequired = enrolledCourses.Sum(c => c.CourseFee);
+            decimal totalPaid = enrolledCourses.Sum(c => c.PaidAmount);
+            decimal totalRemaining = totalRequired - totalPaid;
+
+            var result = new
+            {
+                StudentDetails = new StudentReadDto
+                {
+                    Id = student.Id,
+                    FullName = student.FullName,
+                    Email = student.Email,
+                    Phone = student.Phone,
+                    Specialty = student.Specialty,
+                    EnrolledCoursesCount = student.Enrollments.Count
+                },
+                FinancialSummary = new
+                {
+                    TotalRequiredFees = totalRequired,
+                    TotalPaidAmount = totalPaid,
+                    TotalRemainingBalance = totalRemaining
+                },
+                EnrolledCourses = enrolledCourses
+            };
+
+            return Ok(result);
         }
 
         [HttpPost]
@@ -137,16 +176,24 @@ namespace TrainingCenterSystem.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStudent(long id)
         {
-            var student = await _context.Students.FindAsync(id);
+            var student = await _context.Students
+                .Include(s => s.Enrollments)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
             if (student == null)
             {
-                return NotFound(new { message = $"The Student With ID {id} Does Not Exist." });
+                return NotFound(new { message = $"Student with ID {id} does not exist." });
+            }
+
+            if (student.Enrollments.Any())
+            {
+                return BadRequest(new { message = "Cannot delete student with active course enrollments." });
             }
 
             _context.Students.Remove(student);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = $"The Student With ID {id} Deleted Successfully." });
+            return Ok(new { message = $"Student with ID {id} deleted successfully." });
         } 
     }
          
