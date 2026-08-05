@@ -9,7 +9,7 @@ namespace TrainingCenterSystem.Models.DTOs.Payment
 
         [Required(ErrorMessage = "Payment amount is required.")]
         [Range(30, 1000, ErrorMessage = "Payment amount must start from 30.")]
-        public decimal Amount { get; set; }
+        public decimal Amount { get; set; } = 0;
 
         public string? Notes { get; set; }
     }

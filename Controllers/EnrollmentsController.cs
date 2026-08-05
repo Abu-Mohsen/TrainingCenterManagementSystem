@@ -33,7 +33,7 @@ namespace TrainingCenterSystem.Controllers
                     CourseId = e.CourseId,
                     CourseTitle = e.Course.Title,
                     EnrollmentDate = e.EnrollmentDate,
-                    Status = "Active",
+                    Status = e.Status,
                     TotalAmount = e.Course.Fee,
                     PaidAmount = e.Payments.Sum(p => p.Amount),
                     IsFullyPaid = e.Payments.Sum(p => p.Amount) >= e.Course.Fee
@@ -59,7 +59,7 @@ namespace TrainingCenterSystem.Controllers
                     CourseId = e.CourseId,
                     CourseTitle = e.Course.Title,
                     EnrollmentDate = e.EnrollmentDate,
-                    Status = "Active",
+                    Status = e.Status,
                     TotalAmount = e.Course.Fee,
                     PaidAmount = e.Payments.Sum(p => p.Amount),
                     IsFullyPaid = e.Payments.Sum(p => p.Amount) >= e.Course.Fee
@@ -99,7 +99,9 @@ namespace TrainingCenterSystem.Controllers
             {
                 StudentId = dto.StudentId,
                 CourseId = dto.CourseId,
-                EnrollmentDate = DateTime.UtcNow
+                EnrollmentDate = DateTime.UtcNow,
+                TotalAmount = course.Fee,
+
             };
 
             _context.Enrollments.Add(enrollment);
@@ -113,7 +115,7 @@ namespace TrainingCenterSystem.Controllers
                 CourseId = course.Id,
                 CourseTitle = course.Title,
                 EnrollmentDate = enrollment.EnrollmentDate,
-                Status = "Active",
+                Status = enrollment.Status,
                 TotalAmount = course.Fee,
                 PaidAmount = 0,
                 IsFullyPaid = false
@@ -123,7 +125,7 @@ namespace TrainingCenterSystem.Controllers
 
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("cancel/{id}")]
         public async Task<IActionResult> DeleteEnrollment(long id)
         {
             var enrollment = await _context.Enrollments.FindAsync(id);
@@ -132,7 +134,7 @@ namespace TrainingCenterSystem.Controllers
                 return NotFound(new { message = $"The Enrollment With ID {id} Does Not Exist." });
             }
 
-            _context.Enrollments.Remove(enrollment);
+            enrollment.Status = "Canceled";
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Enrollment ID {id} has been canceled successfully." });

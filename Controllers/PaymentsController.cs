@@ -108,6 +108,15 @@ namespace TrainingCenterSystem.Controllers
             };
 
             _context.Payments.Add(payment);
+            enrollment.PaidAmount += paymentDto.Amount;
+            enrollment.TotalAmount = enrollment.Course.Fee;
+           
+
+            if(enrollment.PaidAmount >= enrollment.TotalAmount)
+            {
+                enrollment.Status = "Completed";
+            }
+
             await _context.SaveChangesAsync();
 
             var resultDto = new PaymentReadDto

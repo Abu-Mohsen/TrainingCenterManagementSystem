@@ -23,7 +23,7 @@ namespace TrainingCenterSystem.Models.Data
             base.OnModelCreating(modelBuilder);
             // Configure relationships and constraints using Fluent API if needed
 
-            // Constraint To Restrict The Same Student From Enrolling In The Same Course Multiple Times
+            // Constraint To Restrict The Same Student From Enrolling In The Same Course Multiple Times (pair Sid and Cid are Unique)
             modelBuilder.Entity<Enrollment>().HasIndex(e => new { e.StudentId, e.CourseId }).IsUnique();
 
             // Configure the relationship between Instructor and Course
