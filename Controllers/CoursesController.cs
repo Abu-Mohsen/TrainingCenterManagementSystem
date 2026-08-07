@@ -36,7 +36,7 @@ namespace TrainingCenterSystem.Controllers
                     EndDate = c.EndDate,
                     InstructorId = c.InstructorId,
                     InstructorName = c.Instructor != null ? c.Instructor.FullName : "Not Specified Yet.",
-                    EnrolledStudentsCount = c.Enrollments.Count
+                    EnrolledStudentsCount = c.Enrollments.Count(e => e.Status != "Canceled")
                 })
                 .ToListAsync();
             return Ok(courses);
@@ -46,42 +46,39 @@ namespace TrainingCenterSystem.Controllers
         public async Task<IActionResult> GetCourse(long id)
         {
             var course = await _context.Courses
-                .Include(c => c.Instructor)
-                .Include(c => c.Enrollments)
-                    .ThenInclude(e => e.Student)
-                .FirstOrDefaultAsync(c => c.Id == id);
-            
-            if(course == null) return NotFound(new {message = $"The Course With ID {id} Does Not Exist." });
-
-            var enrolledStudents = course.Enrollments.Select(e => new // Anonymous Type
-            {
-                EnrollmentId = e.Id,
-                StudentId = e.StudentId,
-                StudentName = e.Student.FullName,
-                EnrollmentDate = e.EnrollmentDate
-            }).ToList();
-
-            var result = new
-            {
-                CourseDetails = new CourseReadDto
+                .Where(c => c.Id == id)
+                .Select(c => new
                 {
-                    Id = course.Id,
-                    Title = course.Title,
-                    Description = course.Description,
-                    MaxCapacity = course.MaxCapacity,
-                    Fee = course.Fee,
-                    StartDate = course.StartDate,
-                    EndDate = course.EndDate,
-                    InstructorId = course.InstructorId,
-                    InstructorName = course.Instructor != null ? course.Instructor.FullName : "Not Specified Yet.",
-                    EnrolledStudentsCount = course.Enrollments.Count
-                },
+                    CourseDetails = new CourseReadDto
+                    {
+                        Id = c.Id,
+                        Title = c.Title,
+                        Description = c.Description,
+                        MaxCapacity = c.MaxCapacity,
+                        Fee = c.Fee,
+                        StartDate = c.StartDate,
+                        EndDate = c.EndDate,
+                        InstructorId = c.InstructorId,
+                        InstructorName = c.Instructor != null ? c.Instructor.FullName : "Not Specified Yet.",
+                        EnrolledStudentsCount = c.Enrollments.Count(e => e.Status != "Canceled")
+                    },
+                    AvailableSeats = c.MaxCapacity - c.Enrollments.Count(e => e.Status != "Canceled"),
 
-                AvailableSeats = course.MaxCapacity - course.Enrollments.Count,
-                EnrolledStudents = enrolledStudents
-            };
+                    EnrolledStudents = c.Enrollments
+                        .Where(e => e.Status != "Canceled")
+                        .Select(e => new StudentEnrollmentDto
+                        {
+                            EnrollmentId = e.Id,
+                            StudentId = e.StudentId,
+                            StudentName = e.Student.FullName,
+                            EnrollmentDate = e.EnrollmentDate
 
-            return Ok(result);
+                        }).ToList()
+                }).FirstOrDefaultAsync();
+
+            if (course == null) return NotFound(new { message = $"The Course With ID {id} Does Not Exist." });
+
+            return Ok(course);
         }
 
         [HttpPost]

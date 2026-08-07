@@ -33,7 +33,9 @@ namespace TrainingCenterSystem.Controllers
                     CourseId = e.CourseId,
                     CourseTitle = e.Course.Title,
                     EnrollmentDate = e.EnrollmentDate,
-                    Status = e.Status,
+                    Status = e.Status == "Canceled"
+                        ? "Canceled"
+                        : ((e.Payments.Sum(p => (decimal?)p.Amount) ?? 0) >= e.Course.Fee ? "Completed" : "Active"),
                     TotalAmount = e.Course.Fee,
                     PaidAmount = e.Payments.Sum(p => p.Amount),
                     IsFullyPaid = e.Payments.Sum(p => p.Amount) >= e.Course.Fee
@@ -59,7 +61,9 @@ namespace TrainingCenterSystem.Controllers
                     CourseId = e.CourseId,
                     CourseTitle = e.Course.Title,
                     EnrollmentDate = e.EnrollmentDate,
-                    Status = e.Status,
+                    Status = e.Status == "Canceled"
+                        ? "Canceled"
+                        : ((e.Payments.Sum(p => (decimal?)p.Amount) ?? 0) >= e.Course.Fee ? "Completed" : "Active"),
                     TotalAmount = e.Course.Fee,
                     PaidAmount = e.Payments.Sum(p => p.Amount),
                     IsFullyPaid = e.Payments.Sum(p => p.Amount) >= e.Course.Fee
@@ -92,9 +96,11 @@ namespace TrainingCenterSystem.Controllers
             var alreadyEnrolled = await _context.Enrollments.AnyAsync(e => e.StudentId == dto.StudentId && e.CourseId == dto.CourseId);
             if (alreadyEnrolled) return BadRequest(new { message = $"The Student With ID {dto.StudentId} Is Already Enrolled In The Course With ID {dto.CourseId}." });
 
-            // check if the course has reached its maximum capacity / [Restriction] A course can only have a limited number of students enrolled
-            if(course.Enrollments.Count >= course.MaxCapacity) return BadRequest(new { message = $"Cannot enroll. The course has reached its maximum capacity of {course.MaxCapacity} students." });
-            
+            // Check Capacity expect (Canceled Enrolls)
+            var activeEnrollmentsCount = course.Enrollments.Count(e => e.Status != "Canceled");
+            if (activeEnrollmentsCount >= course.MaxCapacity)
+                return BadRequest(new { message = $"Cannot enroll. The course has reached its maximum capacity of {course.MaxCapacity} students." });
+
             var enrollment = new Enrollment
             {
                 StudentId = dto.StudentId,

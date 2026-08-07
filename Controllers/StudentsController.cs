@@ -40,19 +40,16 @@ namespace TrainingCenterSystem.Controllers
                 query = query.Where(s => s.Specialty.ToLower().Contains(dto.Specialty.ToLower().Trim()));
             }
 
+            // Remove duplicates and ensure distinct results
             var students = await query
-                .Include(s => s.Enrollments)
-                    .ThenInclude(e => e.Payments)
-                .Include(s => s.Enrollments)
-                    .ThenInclude(e => e.Course)
-                .Select(s => new StudentReadDto
+                 .Select(s => new StudentReadDto
                 {
                     Id = s.Id,
                     FullName = s.FullName,
                     Email = s.Email,
                     PhoneNumber = s.PhoneNumber,
                     Specialty = s.Specialty,
-                    EnrolledCoursesCount = s.Enrollments.Count
+                    EnrolledCoursesCount = s.Enrollments.Count(e => e.Status != "Canceled")
                 })
                 .ToListAsync();
 
@@ -62,56 +59,62 @@ namespace TrainingCenterSystem.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetStudent(long id)
         {
-            var student = await _context.Students
-                .Include(s => s.Enrollments)
-                    .ThenInclude(e => e.Course)
-                .Include(s => s.Enrollments)
-                    .ThenInclude(e => e.Payments)
-                .FirstOrDefaultAsync(s => s.Id == id);
+            var result = await _context.Students
+                .Where(s => s.Id == id)
+                .Select(s => new
+        {
+            StudentDetails = new StudentReadDto
+            {
+                Id = s.Id,
+                FullName = s.FullName,
+                Email = s.Email,
+                PhoneNumber = s.PhoneNumber,
+                Specialty = s.Specialty,
+                EnrolledCoursesCount = s.Enrollments.Count(e => e.Status != "Canceled")
+            },
 
-            if (student == null)
+           
+            EnrolledCourses = s.Enrollments
+                .Where(e => e.Status != "Canceled")
+                .Select(e => new
+                {
+                    EnrollmentId = e.Id,
+                    CourseId = e.CourseId,
+                    CourseTitle = e.Course.Title,
+                    CourseFee = e.Course.Fee,
+                    PaidAmount = e.Payments.Sum(p => (decimal?)p.Amount) ?? 0,
+                    RemainingAmount = e.Course.Fee - (e.Payments.Sum(p => (decimal?)p.Amount) ?? 0),
+                    IsFullyPaid = (e.Payments.Sum(p => (decimal?)p.Amount) ?? 0) >= e.Course.Fee,
+                    EnrollmentDate = e.EnrollmentDate,
+                    Status = (e.Payments.Sum(p => (decimal?)p.Amount) ?? 0 ) >= e.Course.Fee ? "Completed" : "Active"
+                })
+                .ToList()
+        })
+        .FirstOrDefaultAsync();
+
+            if (result == null)
             {
                 return NotFound(new { message = $"The Student With ID {id} Not Exist." });
             }
 
-            var enrolledCourses = student.Enrollments.Select(e => new
-            {
-                EnrollmentId = e.Id,
-                CourseId = e.CourseId,
-                CourseTitle = e.Course.Title,
-                CourseFee = e.Course.Fee,
-                PaidAmount = e.Payments.Sum(p => p.Amount),
-                RemainingAmount = e.Course.Fee - e.Payments.Sum(p => p.Amount),
-                IsFullyPaid = e.Payments.Sum(p => p.Amount) >= e.Course.Fee,
-                EnrollmentDate = e.EnrollmentDate
-
-            }).ToList();
-
-            decimal totalRequired = enrolledCourses.Sum(c => c.CourseFee);
-            decimal totalPaid = enrolledCourses.Sum(c => c.PaidAmount);
+            
+            decimal totalRequired = result.EnrolledCourses.Sum(c => c.CourseFee);
+            decimal totalPaid = result.EnrolledCourses.Sum(c => c.PaidAmount);
             decimal totalRemaining = totalRequired - totalPaid;
 
-            var result = new
+            var response = new
             {
-                StudentDetails = new StudentReadDto
-                {
-                    Id = student.Id,
-                    FullName = student.FullName,
-                    Email = student.Email,
-                    PhoneNumber = student.PhoneNumber,
-                    Specialty = student.Specialty,
-                    EnrolledCoursesCount = student.Enrollments.Count
-                },
+                result.StudentDetails,
                 FinancialSummary = new
                 {
                     TotalRequiredFees = totalRequired,
                     TotalPaidAmount = totalPaid,
                     TotalRemainingBalance = totalRemaining
                 },
-                EnrolledCourses = enrolledCourses
+                result.EnrolledCourses
             };
 
-            return Ok(result);
+            return Ok(response);
         }
 
         [HttpPost]

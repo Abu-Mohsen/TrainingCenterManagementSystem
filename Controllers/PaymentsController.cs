@@ -23,10 +23,6 @@ namespace TrainingCenterSystem.Controllers
         public async Task<IActionResult> GetPayments()
         {
             var payments = await _context.Payments
-                .Include(p => p.Enrollment)
-                    .ThenInclude(e => e.Student)
-                .Include(p => p.Enrollment)
-                    .ThenInclude(e => e.Course)
                 .Select(p => new PaymentReadDto
                 {
                     Id = p.Id,
@@ -46,10 +42,6 @@ namespace TrainingCenterSystem.Controllers
         public async Task<IActionResult> GetPayment(long id)
         {
             var payment = await _context.Payments
-                .Include(p => p.Enrollment)
-                    .ThenInclude(e => e.Student)
-                .Include(p => p.Enrollment)
-                    .ThenInclude(e => e.Course)
                 .Where(p => p.Id == id)
                 .Select(p => new PaymentReadDto
                 {

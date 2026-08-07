@@ -56,7 +56,7 @@ namespace TrainingCenterSystem.Controllers
                 Fee = c.Fee,
                 StartDate = c.StartDate,
                 EndDate = c.EndDate,
-                EnrolledStudentsCount = c.Enrollments.Count
+                EnrolledStudentsCount = c.Enrollments.Count(e => e.Status != "Canceled")
 
             }).ToList();
 
