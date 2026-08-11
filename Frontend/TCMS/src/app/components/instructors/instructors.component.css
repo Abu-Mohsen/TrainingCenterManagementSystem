@@ -3,3 +3,7 @@
     align-items: center;
     justify-content: space-between;
 }
+
+thead, tbody{
+    text-align: center;
+}

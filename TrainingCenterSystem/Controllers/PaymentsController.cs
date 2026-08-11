@@ -70,25 +70,33 @@ namespace TrainingCenterSystem.Controllers
             if (paymentDto == null) return BadRequest(new { message = "Payment data is required." });
 
             var enrollment = await _context.Enrollments
-                .Include( e => e.Student)
-                .Include ( e=> e.Course)
-                .Include ( e => e.Payments)
-                .FirstOrDefaultAsync( e => e.Id == paymentDto.EnrollmentId);
+                .Include(e => e.Student)
+                .Include(e => e.Course)
+                .FirstOrDefaultAsync(e => e.Id == paymentDto.EnrollmentId);
 
             if (enrollment == null) return NotFound(new { message = $"Enrollment with ID {paymentDto.EnrollmentId} not found." });
 
-            decimal totalPaid = enrollment.Payments.Sum(p => p.Amount);
-            decimal remainingBalance = enrollment.Course.Fee - totalPaid;
+            if (enrollment.Status == "Canceled")
+            {
+                return BadRequest(new { message = "Cannot add a payment to a canceled enrollment." });
+            }
 
-            // Check if the enrollment is already fully paid
-            if ( remainingBalance <= 0) {
+            decimal remainingBalance = enrollment.TotalAmount - enrollment.PaidAmount;
+
+            if (remainingBalance <= 0)
+            {
                 return BadRequest(new { message = "The enrollment is already fully paid." });
             }
 
-            // Check if the payment amount exceeds the remaining balance
             if (paymentDto.Amount > remainingBalance)
             {
                 return BadRequest(new { message = $"The payment amount ({paymentDto.Amount}) exceeds the remaining balance of ({remainingBalance})." });
+            }
+
+            // Minimum payment is 30, EXCEPT when the amount exactly settles what's left
+             if (paymentDto.Amount < 30 && paymentDto.Amount != remainingBalance)
+            {
+                return BadRequest(new { message = $"Minimum payment is 30, unless it settles the full remaining balance of ({remainingBalance})." });
             }
 
             var payment = new Payment
@@ -101,10 +109,8 @@ namespace TrainingCenterSystem.Controllers
 
             _context.Payments.Add(payment);
             enrollment.PaidAmount += paymentDto.Amount;
-            enrollment.TotalAmount = enrollment.Course.Fee;
            
-
-            if(enrollment.PaidAmount >= enrollment.TotalAmount)
+            if (enrollment.PaidAmount >= enrollment.TotalAmount)
             {
                 enrollment.Status = "Completed";
             }

@@ -22,9 +22,6 @@ namespace TrainingCenterSystem.Controllers
         public async Task<IActionResult> GetEnrollments()
         {
             var enrollments = await _context.Enrollments
-                .Include(e => e.Student)
-                .Include(e => e.Course)
-                .Include(e => e.Payments)
                 .Select(e => new EnrollmentReadDto
                 {
                     Id = e.Id,
@@ -33,12 +30,10 @@ namespace TrainingCenterSystem.Controllers
                     CourseId = e.CourseId,
                     CourseTitle = e.Course.Title,
                     EnrollmentDate = e.EnrollmentDate,
-                    Status = e.Status == "Canceled"
-                        ? "Canceled"
-                        : ((e.Payments.Sum(p => (decimal?)p.Amount) ?? 0) >= e.Course.Fee ? "Completed" : "Active"),
-                    TotalAmount = e.Course.Fee,
-                    PaidAmount = e.Payments.Sum(p => p.Amount),
-                    IsFullyPaid = e.Payments.Sum(p => p.Amount) >= e.Course.Fee
+                    Status = e.Status,
+                    TotalAmount = e.TotalAmount,
+                    PaidAmount = e.PaidAmount,
+                    IsFullyPaid = e.PaidAmount >= e.TotalAmount
                 })
                 .ToListAsync();
 
@@ -49,9 +44,6 @@ namespace TrainingCenterSystem.Controllers
         public async Task<IActionResult> GetEnrollment(long id)
         {
             var enrollment = await _context.Enrollments
-                .Include(e => e.Student)
-                .Include(e => e.Course)
-                .Include(e => e.Payments)
                 .Where(e => e.Id == id)
                 .Select(e => new EnrollmentReadDto
                 {
@@ -61,12 +53,10 @@ namespace TrainingCenterSystem.Controllers
                     CourseId = e.CourseId,
                     CourseTitle = e.Course.Title,
                     EnrollmentDate = e.EnrollmentDate,
-                    Status = e.Status == "Canceled"
-                        ? "Canceled"
-                        : ((e.Payments.Sum(p => (decimal?)p.Amount) ?? 0) >= e.Course.Fee ? "Completed" : "Active"),
-                    TotalAmount = e.Course.Fee,
-                    PaidAmount = e.Payments.Sum(p => p.Amount),
-                    IsFullyPaid = e.Payments.Sum(p => p.Amount) >= e.Course.Fee
+                    Status = e.Status,
+                    TotalAmount = e.TotalAmount,
+                    PaidAmount = e.PaidAmount,
+                    IsFullyPaid = e.PaidAmount >= e.TotalAmount
                 })
                 .FirstOrDefaultAsync();
 
@@ -76,6 +66,7 @@ namespace TrainingCenterSystem.Controllers
             }
 
             return Ok(enrollment);
+
         }
 
         [HttpPost]
@@ -84,20 +75,21 @@ namespace TrainingCenterSystem.Controllers
         {
             if (dto == null) return BadRequest(new { message = "Enrollment data is null." });
 
-            // cheack if the student exists
             var student = await _context.Students.FindAsync(dto.StudentId);
-            if(student == null) return NotFound(new { message = $"The Student With ID {dto.StudentId} Does Not Exist." });
+            if (student == null) return NotFound(new { message = $"The Student With ID {dto.StudentId} Does Not Exist." });
 
-            // check if the course exists
-            var course = await _context.Courses.Include(c => c.Enrollments).FirstOrDefaultAsync(c => c.Id == dto.CourseId);
-            if(course == null) return NotFound(new { message = $"The Course With ID {dto.CourseId} Does Not Exist." });
+            var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == dto.CourseId);
+            if (course == null) return NotFound(new { message = $"The Course With ID {dto.CourseId} Does Not Exist." });
 
-            // check if the student is already enrolled in the course / [Restriction] A student can only enroll in a course once
-            var alreadyEnrolled = await _context.Enrollments.AnyAsync(e => e.StudentId == dto.StudentId && e.CourseId == dto.CourseId);
-            if (alreadyEnrolled) return BadRequest(new { message = $"The Student With ID {dto.StudentId} Is Already Enrolled In The Course With ID {dto.CourseId}." });
+            var alreadyEnrolled = await _context.Enrollments
+                .AnyAsync(e => e.StudentId == dto.StudentId && e.CourseId == dto.CourseId);
+            if (alreadyEnrolled)
+                return BadRequest(new { message = $"The Student With ID {dto.StudentId} Is Already Enrolled In The Course With ID {dto.CourseId}." });
 
-            // Check Capacity expect (Canceled Enrolls)
-            var activeEnrollmentsCount = course.Enrollments.Count(e => e.Status != "Canceled");
+            // Mod | Note For Me : Direct COUNT query instead of loading the full Enrollments collection just to count it.
+            var activeEnrollmentsCount = await _context.Enrollments
+                .CountAsync(e => e.CourseId == dto.CourseId && e.Status != "Canceled");
+
             if (activeEnrollmentsCount >= course.MaxCapacity)
                 return BadRequest(new { message = $"Cannot enroll. The course has reached its maximum capacity of {course.MaxCapacity} students." });
 
@@ -106,12 +98,24 @@ namespace TrainingCenterSystem.Controllers
                 StudentId = dto.StudentId,
                 CourseId = dto.CourseId,
                 EnrollmentDate = DateTime.UtcNow,
-                TotalAmount = course.Fee,
-
+                TotalAmount = course.Fee, // snapshot of the fee at enrollment time - never changed afterwards
+                PaidAmount = 0,
+                Status = "Active"
             };
 
             _context.Enrollments.Add(enrollment);
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                //Notes
+                // Safety net for the (StudentId, CourseId) unique index, in case two requests
+                // race past the AnyAsync check above at the same time.
+                return Conflict(new { message = $"The Student With ID {dto.StudentId} Is Already Enrolled In The Course With ID {dto.CourseId}." });
+            }
 
             var resultDto = new EnrollmentReadDto
             {
@@ -122,13 +126,12 @@ namespace TrainingCenterSystem.Controllers
                 CourseTitle = course.Title,
                 EnrollmentDate = enrollment.EnrollmentDate,
                 Status = enrollment.Status,
-                TotalAmount = course.Fee,
+                TotalAmount = enrollment.TotalAmount,
                 PaidAmount = 0,
                 IsFullyPaid = false
             };
 
             return CreatedAtAction(nameof(GetEnrollment), new { id = enrollment.Id }, resultDto);
-
         }
 
         [HttpDelete("cancel/{id}")]
@@ -138,6 +141,11 @@ namespace TrainingCenterSystem.Controllers
             if (enrollment == null)
             {
                 return NotFound(new { message = $"The Enrollment With ID {id} Does Not Exist." });
+            }
+
+            if (enrollment.Status == "Canceled")
+            {
+                return BadRequest(new { message = "This enrollment is already canceled." });
             }
 
             enrollment.Status = "Canceled";

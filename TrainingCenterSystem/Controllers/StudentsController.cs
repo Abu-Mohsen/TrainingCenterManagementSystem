@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using TrainingCenterSystem.Models.Data;
-using TrainingCenterSystem.Models.Entities;
-using TrainingCenterSystem.Models.DTOs.Student;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TrainingCenterSystem.Models.Data;
+using TrainingCenterSystem.Models.DTOs.Student;
+using TrainingCenterSystem.Models.Entities;
 
 
 namespace TrainingCenterSystem.Controllers
@@ -40,7 +41,7 @@ namespace TrainingCenterSystem.Controllers
                 query = query.Where(s => s.Specialty.ToLower().Contains(dto.Specialty.ToLower().Trim()));
             }
 
-            // Remove duplicates and ensure distinct results
+            // retrieve the students with their enrolled courses count
             var students = await query
                  .Select(s => new StudentReadDto
                 {
@@ -59,59 +60,57 @@ namespace TrainingCenterSystem.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetStudent(long id)
         {
-            var result = await _context.Students
+            var student = await _context.Students
                 .Where(s => s.Id == id)
                 .Select(s => new
-        {
-            StudentDetails = new StudentReadDto
-            {
-                Id = s.Id,
-                FullName = s.FullName,
-                Email = s.Email,
-                PhoneNumber = s.PhoneNumber,
-                Specialty = s.Specialty,
-                EnrolledCoursesCount = s.Enrollments.Count(e => e.Status != "Canceled")
-            },
-
-           
-            EnrolledCourses = s.Enrollments
-                .Where(e => e.Status != "Canceled")
-                .Select(e => new
                 {
-                    EnrollmentId = e.Id,
-                    CourseId = e.CourseId,
-                    CourseTitle = e.Course.Title,
-                    CourseFee = e.Course.Fee,
-                    PaidAmount = e.Payments.Sum(p => (decimal?)p.Amount) ?? 0,
-                    RemainingAmount = e.Course.Fee - (e.Payments.Sum(p => (decimal?)p.Amount) ?? 0),
-                    IsFullyPaid = (e.Payments.Sum(p => (decimal?)p.Amount) ?? 0) >= e.Course.Fee,
-                    EnrollmentDate = e.EnrollmentDate,
-                    Status = (e.Payments.Sum(p => (decimal?)p.Amount) ?? 0 ) >= e.Course.Fee ? "Completed" : "Active"
+                    StudentDetails = new StudentReadDto
+                    {
+                        Id = s.Id,
+                        FullName = s.FullName,
+                        Email = s.Email,
+                        PhoneNumber = s.PhoneNumber,
+                        Specialty = s.Specialty,
+                        EnrolledCoursesCount = s.Enrollments.Count(e => e.Status != "Canceled")
+                    },
+                    // Mod : TotalAmount / PaidAmount on Enrollment (source of truth)
+                    EnrolledCourses = s.Enrollments
+                        .Where(e => e.Status != "Canceled")
+                        .Select(e => new
+                        {
+                            EnrollmentId = e.Id,
+                            CourseId = e.CourseId,
+                            CourseTitle = e.Course.Title,
+                            CourseFee = e.TotalAmount,
+                            PaidAmount = e.PaidAmount,
+                            RemainingAmount = e.TotalAmount - e.PaidAmount,
+                            IsFullyPaid = e.PaidAmount >= e.TotalAmount,
+                            EnrollmentDate = e.EnrollmentDate,
+                            Status = e.Status
+                        })
+                        .ToList()
                 })
-                .ToList()
-        })
-        .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync();
 
-            if (result == null)
+            if (student == null)
             {
                 return NotFound(new { message = $"The Student With ID {id} Not Exist." });
             }
 
-            
-            decimal totalRequired = result.EnrolledCourses.Sum(c => c.CourseFee);
-            decimal totalPaid = result.EnrolledCourses.Sum(c => c.PaidAmount);
+            decimal totalRequired = student.EnrolledCourses.Sum(c => c.CourseFee);
+            decimal totalPaid = student.EnrolledCourses.Sum(c => c.PaidAmount);
             decimal totalRemaining = totalRequired - totalPaid;
 
             var response = new
             {
-                result.StudentDetails,
+                student.StudentDetails,
                 FinancialSummary = new
                 {
                     TotalRequiredFees = totalRequired,
                     TotalPaidAmount = totalPaid,
                     TotalRemainingBalance = totalRemaining
                 },
-                result.EnrolledCourses
+                student.EnrolledCourses
             };
 
             return Ok(response);
@@ -136,7 +135,15 @@ namespace TrainingCenterSystem.Controllers
                 Specialty = dto.Specialty
             };
             _context.Students.Add(student);
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = $"A student with the email '{dto.Email}' already exists." });
+            }
 
             var resultDto = new StudentReadDto
             {
@@ -171,7 +178,15 @@ namespace TrainingCenterSystem.Controllers
             student.PhoneNumber = dto.PhoneNumber;
             student.Specialty = dto.Specialty;
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = $"A student with the email '{dto.Email}' already exists." });
+            }
+
             return NoContent();
         }
 
@@ -179,24 +194,28 @@ namespace TrainingCenterSystem.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStudent(long id)
         {
-            var student = await _context.Students
-                .Include(s => s.Enrollments)
-                .FirstOrDefaultAsync(s => s.Id == id);
-
+            var student = await _context.Students.FindAsync(id);
             if (student == null)
             {
                 return NotFound(new { message = $"Student with ID {id} does not exist." });
             }
 
-            if (student.Enrollments.Any())
+            // --  Deletion is allowed as long as no ACTIVE (non-canceled) enrollment remains
+            //  - Direct existence check against Enrollments 
+            bool hasActiveEnrollments = await _context.Enrollments
+                .AnyAsync(e => e.StudentId == id && e.Status != "Canceled");
+
+            if (hasActiveEnrollments)
             {
-                return BadRequest(new { message = "Cannot delete student with active course enrollments." });
+                return BadRequest(new { message = "Cannot delete student with active (non-canceled) course enrollments." });
             }
 
             _context.Students.Remove(student);
+            // Any Canceled enrollments (and their payments) are removed automatically via [Cascade].
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Student with ID {id} deleted successfully." });
+
         }
     }
 

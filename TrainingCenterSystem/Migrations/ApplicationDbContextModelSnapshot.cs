@@ -133,6 +133,9 @@ namespace TrainingCenterSystem.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Email")
+                        .IsUnique();
+
                     b.ToTable("Instructors");
                 });
 
@@ -194,6 +197,9 @@ namespace TrainingCenterSystem.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.ToTable("Students");
                 });

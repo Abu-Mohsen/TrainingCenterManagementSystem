@@ -44,7 +44,7 @@
         </div>
     </div>
 
-    <div class="card mt-2">
+    <div class="card mt-2 mb-3">
         <div class="card-header table-header">
 
             <div>
@@ -52,7 +52,7 @@
             </div>
 
             <div>
-                <button type="button" class="btn btn-outline-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#saveInstructorModal">
                     <i class="bi bi-person-add"></i>
                     Add Instructor
                 </button>
@@ -60,41 +60,83 @@
 
         </div>
             
-        <div class="card-body">
-            <table class="table table-striped">
+        <div class="card-body ">
+            <table class="table table-striped ">
                 <thead>
                     <tr>
-                        <th scope="col">#</th>
-                        <th scope="col"></th>
-                        <th scope="col"></th>
-                        <th scope="col"></th>
+                        @for(col of instructorsTableColumns; track col){
+                            <th>{{col}}</th>
+                        }
+
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <th scope="row">1</th>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <th scope="row">2</th>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <th scope="row">3</th>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
+                    @for(instructor of instructors; track instructor.id ; let i = $index){
+                        <tr>
+                            <td>{{i}}</td>
+                            <td>{{instructor.fullName}}</td>
+                            <td>{{instructor.email}}</td>
+                            <td>{{instructor.phoneNumber}}</td>
+                            <td>
+                                @if(instructor.status){
+                                    <span class="badge bg-success ">Active</span>
+                                }@else {
+                                    <span class="badge bg-danger ">Inactive</span>
+                                }
+                            </td>
+                            <td>{{instructor.specialization}}</td>
+                            <td>{{instructor.assignedCoursesCount}}</td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 
 </div>    
+
+
+<!-- Save/Add/Create Instructor Modal --> <!-- Connect The Modal To The Button By (ID) -->
+<div class=" modal fade" id="saveInstructorModal" tabindex="-1" aria-labelledby="saveInstructorModal" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"> <!-- Center The Modal / Modal-lg / xl / ... -->
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Save Instructor</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+
+            <div class="row ">
+                <div class="col-lg-6 col-md-6 col-sm-12 ">
+                    <label for="fullName" class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="fullName" placeholder="Enter Full Name">
+                </div>
+                <div class="col-lg-6 col-md-6 col-sm-12">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" placeholder="Enter Email">
+                </div>
+            
+            
+                <div class="col-lg-6 col-md-6 col-sm-12" >
+                    <label for="phoneNumber" class="form-label">Phone Number</label>
+                    <input type="text" class="form-control" id="phoneNumber" placeholder="Enter Phone Number">
+                </div>
+                <div class="col-lg-6 col-md-6 col-sm-12">
+                    <label for="specialization" class="form-label">Specialization</label>
+                    <input type="text" class="form-control" id="specialization" placeholder="Enter Specialization">
+                </div>
+            </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>  
 
 
 

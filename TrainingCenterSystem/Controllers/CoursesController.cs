@@ -22,9 +22,8 @@ namespace TrainingCenterSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCourses()
         {
+            // Note For Me: No need to include Instructor and Enrollments in the query, as we are projecting to DTOs directly. 
             var courses = await _context.Courses
-                .Include(c => c.Instructor)
-                .Include(c => c.Enrollments)
                 .Select(c => new CourseReadDto
                 {
                     Id = c.Id,
@@ -39,6 +38,7 @@ namespace TrainingCenterSystem.Controllers
                     EnrolledStudentsCount = c.Enrollments.Count(e => e.Status != "Canceled")
                 })
                 .ToListAsync();
+
             return Ok(courses);
         }
 
@@ -139,13 +139,25 @@ namespace TrainingCenterSystem.Controllers
         {
             if (dto == null) return BadRequest(new { message = "Course data is required." });
             if (dto.EndDate <= dto.StartDate) return BadRequest(new { message = "End Date must be after Start Date." });
+
             var course = await _context.Courses.FindAsync(id);
             if (course == null) return NotFound(new { message = $"The Course With ID {id} Does Not Exist." });
+
             if (dto.InstructorId.HasValue)
             {
                 var instructorExists = await _context.Instructors.AnyAsync(i => i.Id == dto.InstructorId.Value);
                 if (!instructorExists) return BadRequest(new { message = $"Instructor with ID {dto.InstructorId.Value} does not exist." });
             }
+
+            // Prevent updating MaxCapacity to a value less than the number of currently enrolled students
+            var activeEnrollmentsCount = await _context.Enrollments
+                .CountAsync(e => e.CourseId == id && e.Status != "Canceled");
+
+            if(dto.MaxCapacity < activeEnrollmentsCount)
+            {
+                return BadRequest(new { message = $"Cannot set MaxCapacity to {dto.MaxCapacity} because there are already {activeEnrollmentsCount} students enrolled." });
+            }
+
             course.Title = dto.Title;
             course.Description = dto.Description;
             course.MaxCapacity = dto.MaxCapacity;
@@ -153,6 +165,7 @@ namespace TrainingCenterSystem.Controllers
             course.StartDate = dto.StartDate;
             course.EndDate = dto.EndDate;
             course.InstructorId = dto.InstructorId;
+
             await _context.SaveChangesAsync();
             return NoContent();
         }
@@ -160,21 +173,24 @@ namespace TrainingCenterSystem.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCourse(long id)
         {
-            var course = await _context.Courses
-                .Include(c => c.Enrollments)
-                .FirstOrDefaultAsync(c => c.Id == id);
+            var course = await _context.Courses.FindAsync(id);
             if (course == null) return NotFound(new { message = $"The Course With ID {id} Does Not Exist." });
 
-            // Validation : Check if there are any enrollments for this course
-            if (course.Enrollments.Any())
+            // Deletion is allowed as long as no ACTIVE (non-canceled) enrollment remains.
+            bool hasActiveEnrollments = await _context.Enrollments
+                .AnyAsync(e => e.CourseId == id && e.Status != "Canceled");
+
+            if (hasActiveEnrollments)
             {
-                return BadRequest(new { message = "Cannot delete the course because there are students enrolled in it." });
+                return BadRequest(new { message = "Cannot delete the course because there are active students enrolled in it." });
             }
 
             _context.Courses.Remove(course);
+            // Any Canceled enrollments (and their payments) are removed automatically via Cascade.
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"The Course With ID {id} Has Been Deleted Successfully." });
+
 
         }
 
