@@ -21,10 +21,32 @@ namespace TrainingCenterSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetInstructors()
+        public async Task<IActionResult> GetInstructors([FromQuery] string? name, [FromQuery] string? specialization, [FromQuery] string? status)
         {
+            name = name?.Trim();
+            specialization = specialization?.Trim();
+            status = status?.Trim();
 
-            var instructors = await _context.Instructors
+            var today = DateTime.UtcNow.Date;
+            var query = _context.Instructors.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(i => i.FullName.Contains(name));
+            }
+
+            if (!string.IsNullOrWhiteSpace(specialization))
+            {
+                query = query.Where(i => i.Specialization.Contains(specialization));
+            }
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                bool wantActive = status.Equals("Active", StringComparison.OrdinalIgnoreCase);
+                query = query.Where(i => i.Courses.Any(c => c.StartDate.Date <= today && c.EndDate.Date >= today) == wantActive);
+            }
+
+            var instructors = await query
                 .Select(instructor => new InstructorReadDto
                 {
                     Id = instructor.Id,
@@ -32,28 +54,32 @@ namespace TrainingCenterSystem.Controllers
                     Email = instructor.Email,
                     PhoneNumber = instructor.PhoneNumber,
                     Specialization = instructor.Specialization,
-                    AssignedCoursesCount = instructor.Courses.Count
+                    AssignedCoursesCount = instructor.Courses.Count,
+                    Status = instructor.Courses.Any(c => c.StartDate.Date <= today && c.EndDate.Date >= today) ? "Active" : "Inactive"
                 })
                 .ToListAsync();
-            
+
             return Ok(instructors);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetInstructor(long id)
         {
-            var instructor = await _context.Instructors
+            var today = DateTime.UtcNow.Date;
+
+            var result = await _context.Instructors
                 .Where(i => i.Id == id)
                 .Select(i => new
                 {
-                    instructorDetails = new InstructorReadDto
+                    InstructorDetails = new InstructorReadDto
                     {
                         Id = i.Id,
                         FullName = i.FullName,
                         Email = i.Email,
                         PhoneNumber = i.PhoneNumber,
                         Specialization = i.Specialization,
-                        AssignedCoursesCount = i.Courses.Count
+                        AssignedCoursesCount = i.Courses.Count,
+                        Status = i.Courses.Any(c => c.StartDate.Date <= today && c.EndDate.Date >= today) ? "Active" : "Inactive"
                     },
                     AssignedCourses = i.Courses.Select(c => new
                     {
@@ -65,11 +91,12 @@ namespace TrainingCenterSystem.Controllers
                         EndDate = c.EndDate,
                         EnrolledStudentsCount = c.Enrollments.Count(e => e.Status != "Canceled")
                     }).ToList()
-                }).FirstOrDefaultAsync();
+                })
+                .FirstOrDefaultAsync();
 
-            if(instructor == null) return NotFound(new { message = $"The Instructor With ID {id} Not Exist." });
+            if (result == null) return NotFound(new { message = $"Instructor with ID {id} does not exist." });
 
-            return Ok(instructor);
+            return Ok(result);
         }
 
         [HttpPost]
@@ -112,7 +139,8 @@ namespace TrainingCenterSystem.Controllers
                 Email = instructor.Email,
                 PhoneNumber = instructor.PhoneNumber,
                 Specialization = instructor.Specialization,
-                AssignedCoursesCount = 0 // Cuz it's a new instructor with no courses yet
+                AssignedCoursesCount = 0, // Cuz it's a new instructor with no courses yet
+                Status = "Inactive"
             };
 
             return CreatedAtAction(nameof(GetInstructor), new { id = instructor.Id }, resultDto);
