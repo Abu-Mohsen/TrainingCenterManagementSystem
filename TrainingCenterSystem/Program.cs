@@ -16,6 +16,18 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngular", policy =>
+    {
+        // builder.WithOrigins(" http://localhost:Port")
+        policy.AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -28,7 +40,10 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Training Center API v1");
         c.RoutePrefix = string.Empty; // Set Swagger UI at the app's root
     });
+
 }
+
+app.UseCors("AllowAngular"); // Use This Policy
 
 app.UseHttpsRedirection();
 
