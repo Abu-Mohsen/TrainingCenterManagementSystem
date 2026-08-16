@@ -1,42 +1,42 @@
-
 <div class="container-fluid mt-5">
 
+    <!-- Filter -->
     <div class="card">
         <div class="card-header">
             <h5>
                 <i class="bi bi-funnel"></i>
-                 Filter
+                Filter
             </h5>
         </div>
         <div class="card-body">
-          <div class="row mb-3" >
-            <div class="col-lg-4 col-md-4 col-sm-12">
-                <label for="instructorName"
-                    class="form-label">Instructor Name</label>
-                <input type="text" class="form-control"
-                    id="instructorName"
-                    placeholder="Enter Instructor Name">
-            </div>
+            <div class="row mb-3">
+                <div class="col-lg-4 col-md-4 col-sm-12">
+                    <label for="instructorName" class="form-label">Instructor Name</label>
+                    <input type="text" class="form-control" id="instructorName"
+                        placeholder="Enter Instructor Name" [(ngModel)]="filterName">
+                </div>
 
-            <div class="col-lg-4 col-md-4 col-sm-12">
-                <label for="ID"
-                    class="form-label">ID</label>
-                <input type="number" class="form-control"
-                 id="ID"
-                 placeholder="Enter ID">
-            </div>
+                <div class="col-lg-4 col-md-4 col-sm-12">
+                    <label for="specialization" class="form-label">Specialization</label>
+                    <input type="text" class="form-control" id="specialization"
+                        placeholder="Enter Specialization" [(ngModel)]="filterSpecialization">
+                </div>
 
-            <div class="col-lg-4 col-md-4 col-sm-12">
-                <label for="Status"
-                    class="form-label">Status</label>
-                <input type="text" class="form-control"
-                 id="Status"
-                 placeholder="Enter Status">
+                <div class="col-lg-4 col-md-4 col-sm-12">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" [(ngModel)]="filterStatus">
+                        <option value="">All</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
             </div>
-          </div>
 
             <div class="text-end">
-                <button type="button" class="btn btn-outline-secondary">
+                <button type="button" class="btn btn-outline-secondary me-2" (click)="onResetFilters()">
+                    Reset
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="onSearch()">
                     <i class="bi bi-search"></i>
                     Search
                 </button>
@@ -44,99 +44,196 @@
         </div>
     </div>
 
+    <!-- Table -->
     <div class="card mt-2 mb-3">
         <div class="card-header table-header">
-
             <div>
-                <h5> Instructors </h5>
+                <h5>Instructors</h5>
             </div>
-
             <div>
-                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#saveInstructorModal">
+                <button type="button" class="btn btn-outline-secondary" (click)="openAddModal()">
                     <i class="bi bi-person-add"></i>
                     Add Instructor
                 </button>
             </div>
-
         </div>
-            
-        <div class="card-body ">
-            <table class="table table-striped ">
-                <thead>
-                    <tr>
-                        @for(col of instructorsTableColumns; track col){
-                            <th>{{col}}</th>
-                        }
 
-                    </tr>
-                </thead>
-                <tbody>
-                    @for(instructor of instructors; track instructor.id ; let i = $index){
+        <div class="card-body">
+
+            @if (isLoading) {
+                <p class="text-center text-muted">Loading...</p>
+            }
+
+            @if (errorMessage) {
+                <p class="text-center text-danger">{{errorMessage}}</p>
+            }
+
+            @if (!isLoading && !errorMessage) {
+                <table class="table table-striped">
+                    <thead>
                         <tr>
-                            <td>{{i}}</td>
-                            <td>{{instructor.fullName}}</td>
-                            <td>{{instructor.email}}</td>
-                            <td>{{instructor.phoneNumber}}</td>
-                            <td>
-                                @if(instructor.status){
-                                    <span class="badge bg-success ">Active</span>
-                                }@else {
-                                    <span class="badge bg-danger ">Inactive</span>
-                                }
-                            </td>
-                            <td>{{instructor.specialization}}</td>
-                            <td>{{instructor.assignedCoursesCount}}</td>
+                            @for (col of instructorsTableColumns; track col) {
+                                <th>{{col}}</th>
+                            }
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @for (instructor of instructors; track instructor.id; let i = $index) {
+                            <tr>
+                                <td>{{i + 1}}</td>
+                                <td>{{instructor.fullName}}</td>
+                                <td>{{instructor.email}}</td>
+                                <td>{{instructor.phoneNumber}}</td>
+                                <td>
+                                    @if (instructor.status === 'Active') {
+                                        <span class="badge bg-success">Active</span>
+                                    } @else {
+                                        <span class="badge bg-danger">Inactive</span>
+                                    }
+                                </td>
+                                <td>{{instructor.specialization}}</td>
+                                <td>{{instructor.assignedCoursesCount}}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                                        title="View Details" (click)="viewInstructor(instructor.id)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1"
+                                        title="Edit" (click)="openEditModal(instructor)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                        title="Delete" (click)="deleteInstructor(instructor)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        } @empty {
+                            <tr>
+                                <td [attr.colspan]="instructorsTableColumns.length" class="text-center text-muted">
+                                    No instructors found.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
         </div>
     </div>
+</div>
 
-</div>    
 
-
-<!-- Save/Add/Create Instructor Modal --> <!-- Connect The Modal To The Button By (ID) -->
-<div class=" modal fade" id="saveInstructorModal" tabindex="-1" aria-labelledby="saveInstructorModal" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered"> <!-- Center The Modal / Modal-lg / xl / ... -->
-    <div class="modal-content">
-      <div class="modal-header">
-        <h1 class="modal-title fs-5" id="exampleModalLabel">Save Instructor</h1>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form>
-
-            <div class="row ">
-                <div class="col-lg-6 col-md-6 col-sm-12 ">
-                    <label for="fullName" class="form-label">Full Name</label>
-                    <input type="text" class="form-control" id="fullName" placeholder="Enter Full Name">
-                </div>
-                <div class="col-lg-6 col-md-6 col-sm-12">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" placeholder="Enter Email">
-                </div>
-            
-            
-                <div class="col-lg-6 col-md-6 col-sm-12" >
-                    <label for="phoneNumber" class="form-label">Phone Number</label>
-                    <input type="text" class="form-control" id="phoneNumber" placeholder="Enter Phone Number">
-                </div>
-                <div class="col-lg-6 col-md-6 col-sm-12">
-                    <label for="specialization" class="form-label">Specialization</label>
-                    <input type="text" class="form-control" id="specialization" placeholder="Enter Specialization">
-                </div>
+<!-- Save/Add/Edit Instructor Modal -->
+<div class="modal fade" id="saveInstructorModal" tabindex="-1" aria-labelledby="saveInstructorModal" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5">
+                    {{ editingInstructorId ? 'Edit Instructor' : 'Add Instructor' }}
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <div class="modal-body">
+                <form [formGroup]="instructorForm">
 
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save</button>
-      </div>
+                    @if (saveError) {
+                        <div class="alert alert-danger">{{saveError}}</div>
+                    }
+
+                    <div class="row">
+                        <div class="col-lg-6 col-md-6 col-sm-12">
+                            <label for="fullName" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="fullName" formControlName="fullName"
+                                placeholder="Enter Full Name">
+                            @if (instructorForm.get('fullName')?.invalid && instructorForm.get('fullName')?.touched) {
+                                <small class="text-danger">Full name is required (max 100 characters).</small>
+                            }
+                        </div>
+                        <div class="col-lg-6 col-md-6 col-sm-12">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" formControlName="email"
+                                placeholder="Enter Email">
+                            @if (instructorForm.get('email')?.invalid && instructorForm.get('email')?.touched) {
+                                <small class="text-danger">A valid email is required.</small>
+                            }
+                        </div>
+
+                        <div class="col-lg-6 col-md-6 col-sm-12 mt-3">
+                            <label for="phoneNumber" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="phoneNumber" formControlName="phoneNumber"
+                                placeholder="Enter Phone Number">
+                        </div>
+                        <div class="col-lg-6 col-md-6 col-sm-12 mt-3">
+                            <label for="specialization" class="form-label">Specialization</label>
+                            <input type="text" class="form-control" id="specialization" formControlName="specialization"
+                                placeholder="Enter Specialization">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" [disabled]="isSaving" (click)="save()">
+                    @if (isSaving) {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    Save
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
-</div>  
+</div>
 
 
+<!-- View Instructor Details Modal -->
+<div class="modal fade" id="viewInstructorModal" tabindex="-1" aria-labelledby="viewInstructorModal" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5">Instructor Details</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (selectedInstructorDetail) {
+                    <div class="row mb-3">
+                        <div class="col-md-6"><strong>Full Name:</strong> {{selectedInstructorDetail.instructorDetails.fullName}}</div>
+                        <div class="col-md-6"><strong>Email:</strong> {{selectedInstructorDetail.instructorDetails.email}}</div>
+                        <div class="col-md-6 mt-2"><strong>Phone:</strong> {{selectedInstructorDetail.instructorDetails.phoneNumber}}</div>
+                        <div class="col-md-6 mt-2"><strong>Specialization:</strong> {{selectedInstructorDetail.instructorDetails.specialization}}</div>
+                    </div>
 
+                    <h6>Assigned Courses</h6>
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Capacity</th>
+                                <th>Fee</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Enrolled Students</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (course of selectedInstructorDetail.assignedCourses; track course.courseId) {
+                                <tr>
+                                    <td>{{course.title}}</td>
+                                    <td>{{course.maxCapacity}}</td>
+                                    <td>{{course.fee}}</td>
+                                    <td>{{course.startDate | date:'yyyy-MM-dd'}}</td>
+                                    <td>{{course.endDate | date:'yyyy-MM-dd'}}</td>
+                                    <td>{{course.enrolledStudentsCount}}</td>
+                                </tr>
+                            } @empty {
+                                <tr><td colspan="6" class="text-center text-muted">No courses assigned yet.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
