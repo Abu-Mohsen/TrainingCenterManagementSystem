@@ -1,0 +1,9 @@
+.table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+thead, tbody{
+    text-align: center;
+}
